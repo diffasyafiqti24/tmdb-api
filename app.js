@@ -1,17 +1,13 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const validateQuery = require('./middleware');
+
 dotenv.config();
 
 const app = express();
 
-app.get('/movie/search', async (req, res) => {
+app.get('/movie/search', validateQuery, async (req, res) => {
   const query = req.query.q;
-
-  if (!query) {
-    return res.status(400).json({
-      error: "Parameter q (judul film) wajib diisi"
-    });
-  }
 
   try {
     const response = await fetch(
@@ -20,11 +16,14 @@ app.get('/movie/search', async (req, res) => {
 
     const data = await response.json();
 
-    const hasil = data.results.map(movie => ({
-      judul: movie.title,
-      rilis: movie.release_date,
-      rating: movie.vote_average
-    }));
+    const hasil = data.results
+      .filter(movie => movie.release_date)
+      .sort((a, b) => new Date(b.release_date) - new Date(a.release_date))
+      .map(movie => ({
+        judul: movie.title,
+        rilis: movie.release_date,
+        rating: movie.vote_average
+      }));
 
     res.json(hasil);
 
